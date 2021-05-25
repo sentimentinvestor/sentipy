@@ -1,0 +1,24 @@
+[metadata]
+name = sentiment-investor
+version = 0.0.1
+author = Example Author
+author_email = rs.stok@gmail.com
+description = A sentiment investor API wrapper
+long_description = file: README.md
+long_description_content_type = text/markdown
+url = https://sentimentinvestor.com/
+project_urls =
+    Bug Tracker = https://github.com/lipton-green-tea
+classifiers =
+    Programming Language :: Python :: 3
+    License :: OSI Approved :: MIT License
+    Operating System :: OS Independent
+
+[options]
+package_dir =
+    = sentipy
+packages = find:
+python_requires = >=3.6
+
+[options.packages.find]
+where = src
