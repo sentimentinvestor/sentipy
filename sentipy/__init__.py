@@ -1,6 +1,7 @@
 from . import sentipy
 
 __all__ = [
-    'sentipy'
+    'sentipy',
+    'ws'
 ]
 __version__ = "1.0.2"
