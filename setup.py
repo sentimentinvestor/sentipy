@@ -10,8 +10,8 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setup(
     name="sentiment-investor",
-    version="1.0.2",
-    description="Read the latest Real Python tutorials",
+    version="1.1.0",
+    description="Access the Sentiment Investor API through Python",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://sentimentinvestor.com",
