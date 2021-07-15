@@ -12,13 +12,31 @@ except ImportError:
 
 
 class _Stream:
+    """
+    Base class for different kinds of websocket streams
+    """
+
     base_url = "ws://socket.sentimentinvestor.com/"
+    """
+    WebSocket url to connect to
+    """
+
     __params = {}
     __ws = None
 
-    logging.basicConfig(level=logging.DEBUG)
-
     def __init__(self, token, key, callback, fragment):
+        """
+        Initialise a new web socket stream
+
+        Args:
+            token (str): SentimentInvestor API token
+            key (str): SentimentInvestor API key
+            callback: function accepting one argument of type `StockUpdateData` that is called when data is received
+            fragment: the websocket endpoint to contact
+
+        Raises:
+            ValueError: if token or key is omitted
+        """
         if token is None or key is None:
             raise ValueError(
                 "Please provide a token and key - these can be obtained at "
@@ -71,8 +89,6 @@ class _Stream:
             self.__user_callback(StockUpdateData(message))
 
     def __connect(self):
-        websocket.enableTrace(True)
-
         if self.__fragment is None:
             raise Exception("Use StocksStream or AllStocksStream, cannot use Stream base class!")
 
@@ -89,7 +105,6 @@ class _Stream:
         """
         Manually request a websocket reconnection.
         This should not usually be necessary as Sentipy will try to reconnect automatically if connection is lost
-        :return: None
         """
         self.__connect()
 
@@ -99,11 +114,13 @@ class StocksStream(_Stream):
     def __init__(self, symbols=None, token=None, key=None, callback=None):
         """
         Initialise a new WebSocket listener for specific stocks
-        :param symbols: an iterable of symbols specifying which stock changes to listen for
-        :param token: your SentimentInvestor token
-        :param key:  your SentimentInvestor key
-        :param callback:  a function taking one argument, a StockUpdateData object,
-        that will be called when a stock update is received
+
+        Args:
+            symbols: an iterable of symbols specifying which stock changes to listen for
+            token: SentimentInvestor API token
+            key: SentimentInvestor API key
+            callback: a function taking one argument, a StockUpdateData object,
+            that will be called when a stock update is received
         """
         self.__params["symbols"] = list(symbols) if symbols is not None else []
         super(StocksStream, self).__init__(token, key, callback, "stocks")
@@ -114,10 +131,12 @@ class AllStocksStream(_Stream):
     def __init__(self, token=None, key=None, callback=None):
         """
         Initialise a new WebSocket listener for all available stocks
-        :param token: your SentimentInvestor token
-        :param key:  your SentimentInvestor key
-        :param callback:  a function taking one argument, a StockUpdateData object,
-        that will be called when a stock update is received
+
+        Args:
+            token: SentimentInvestor API token
+            key: SentimentInvestor API key
+            callback: a function taking one argument, a StockUpdateData object,
+            that will be called when a stock update is received
         """
         super(AllStocksStream, self).__init__(token, key, callback, "all")
 
@@ -126,7 +145,9 @@ class StockUpdateData:
     def __init__(self, message):
         """
         Initialise a new data container for the stock update
-        :param message: A JSON string returned by the websocket server
+
+        Args:
+            A JSON string returned by the websocket server
         """
         for k, v in json.loads(message).items():
             setattr(self, k, v)
