@@ -13,14 +13,12 @@ except ImportError:
 
 class _Stream:
     base_url = "ws://socket.sentimentinvestor.com/"
-    __fragment = None
     __params = {}
-    __user_callback = None
     __ws = None
 
     logging.basicConfig(level=logging.DEBUG)
 
-    def __init__(self, token, key, callback):
+    def __init__(self, token, key, callback, fragment):
         if token is None or key is None:
             raise ValueError(
                 "Please provide a token and key - these can be obtained at "
@@ -29,6 +27,7 @@ class _Stream:
         self.__params["token"] = token
 
         self.__user_callback = callback
+        self.__fragment = fragment
 
         self.__connect()
 
@@ -96,7 +95,6 @@ class _Stream:
 
 
 class StocksStream(_Stream):
-    __fragment = "stocks"
 
     def __init__(self, symbols=None, token=None, key=None, callback=None):
         """
@@ -108,11 +106,10 @@ class StocksStream(_Stream):
         that will be called when a stock update is received
         """
         self.__params["symbols"] = list(symbols) if symbols is not None else []
-        super(StocksStream, self).__init__(token, key, callback)
+        super(StocksStream, self).__init__(token, key, callback, "stocks")
 
 
 class AllStocksStream(_Stream):
-    __fragment = "all"
 
     def __init__(self, token=None, key=None, callback=None):
         """
@@ -122,7 +119,7 @@ class AllStocksStream(_Stream):
         :param callback:  a function taking one argument, a StockUpdateData object,
         that will be called when a stock update is received
         """
-        super(AllStocksStream, self).__init__(token, key, callback)
+        super(AllStocksStream, self).__init__(token, key, callback, "all")
 
 
 class StockUpdateData:
