@@ -1,6 +1,109 @@
+import dataclasses
 from json import JSONDecodeError
+from typing import Optional, Any
 
 import requests
+
+
+@dataclasses.dataclass
+class SocialData:
+    mentions: int
+    """The number of times given stock has been mentioned on social platform"""
+    sentiment: float
+    """The average sentiment score of remarks mentioning this stock"""
+    relative_hype: Optional[float]
+    """How many times more frequently has this stock been mentioned than other stocks"""
+
+    def __init__(self, results: dict[str, Any], platform: str):
+        self.mentions = results.get(f"{platform}_mentions")
+        self.sentiment = results.get(f"{platform}_sentiment")
+        self.relative_hype = results.get(f"{platform}_relative_hype")
+
+
+@dataclasses.dataclass
+class Subreddit:
+    mentions: int
+    """The number of times given stock has been mentioned on this subreddit"""
+    sentiment: float
+    """The average sentiment score of remarks mentioning this stock"""
+
+
+@dataclasses.dataclass
+class Reddit:
+    posts: SocialData
+    """Analysis for Reddit posts mentioning this ticker"""
+    comments: SocialData
+    """Analysis for Reddit comments mentioning this ticker"""
+    subreddits: dict[str, Subreddit]
+    """A dictionary of subreddits"""
+
+
+@dataclasses.dataclass
+class TickerData:
+    """
+    Specifies a basic data item for a specific ticker.
+
+    .. attention:: Do not try to initialise one yourself.
+
+    .. versionchanged:: 1.1.0
+    """
+
+    symbol: str
+    """Ticker symbol"""
+    sentiment: float
+    """Positive sentiment (%)"""
+    AHI: float
+    """Average Hype Index"""
+    RHI: float
+    """Relative Hype Index"""
+    SGP: float
+    """Standard General Perception"""
+
+    def __init__(self, symbol: str, results: dict):
+        self.symbol = symbol
+
+        for field in ['sentiment', 'AHI', 'RHI', 'SGP']:
+            setattr(self, field, results.get(field))
+
+
+@dataclasses.dataclass
+class QuoteData(TickerData):
+    """
+    .. attention:: Returned by quote, do not try to initialise one yourself.
+    """
+
+    reddit_data: Reddit
+    """Analysis for Reddit data"""
+    tweets: SocialData
+    """Analysis for Twitter"""
+    stocktwits_posts: SocialData
+    """Analysis for Stocktwits posts"""
+    yahoo_finance_comments: SocialData
+    """Analysis for Yahoo! Finance comments"""
+
+    def __init__(self, symbol: str, results: dict):
+        super().__init__(symbol, results)
+
+        for platform in ['tweet', 'stocktwits_post', 'yahoo_finance_comment']:
+            setattr(self, f"{platform}s", SocialData(results, platform))
+
+        subreddits_processed = None
+        if 'subreddits' in results:
+            subreddits = results.get("subreddits")
+            mentions = subreddits.get("reddit_subreddit_mentions")
+            sentiment = subreddits.get("reddit_subreddit_sentiment")
+            subreddits_processed = {
+                subreddit_name: Subreddit(
+                    mentions=mentions[subreddit_name],
+                    sentiment=sentiment[subreddit_name]
+                ) for subreddit_name in (mentions.keys() & sentiment.keys())
+            }
+
+        self.reddit_data = Reddit(
+            posts=SocialData(results, "reddit_post"),
+            comments=SocialData(results, "reddit_comment"),
+            subreddits=subreddits_processed
+        )
 
 
 class Sentipy:
@@ -18,7 +121,7 @@ class Sentipy:
     The base URL of the SentimentInvestor API
     """
 
-    def __init__(self, token=None, key=None):
+    def __init__(self, token: str = None, key: str = None):
         """
         Initialise a new SentiPy instance with your token and key
 
@@ -41,7 +144,7 @@ class Sentipy:
         self.token = token
         self.key = key
 
-    def __base_request(self, endpoint, params=None):
+    def __base_request(self, endpoint: str, params: dict[str, Any] = None) -> dict:
         """
         Make a request to a specific REST endpoint on the SentimentInvestor API
 
@@ -72,7 +175,7 @@ class Sentipy:
             else:
                 raise Exception(json.get("message"))
 
-    def parsed(self, symbol):
+    def parsed(self, symbol: str) -> TickerData:
         """
         The parsed data endpoints provides the four core metrics for a stock: AHI, RHI, SGP and sentiment.
 
@@ -92,9 +195,9 @@ class Sentipy:
             "symbol": symbol
         }
         response = self.__base_request("parsed", params=params)
-        return Sentipy.QuoteData(response)
+        return TickerData(response.get("symbol"), response.get("results")) if response.get("success") else None
 
-    def raw(self, symbol):
+    def raw(self, symbol: str) -> QuoteData:
         """
         The raw data endpoint provides access to raw data metrics for the monitored social platforms
 
@@ -109,9 +212,9 @@ class Sentipy:
             "symbol": symbol
         }
         response = self.__base_request("raw", params=params)
-        return Sentipy.QuoteData(response)
+        return QuoteData(response.get("symbol"), response.get("results")) if response.get("success") else None
 
-    def quote(self, symbol, enrich=False):
+    def quote(self, symbol: str, enrich: bool = False) -> QuoteData:
         """
         The quote data endpoint provides access to all realtime data about stocks along with further data if requested
 
@@ -163,9 +266,9 @@ class Sentipy:
             "enrich": enrich
         }
         response = self.__base_request("quote", params=params)
-        return Sentipy.QuoteData(response)
+        return QuoteData(response.get("symbol"), response.get("results")) if response.get("success") else None
 
-    def sort(self, metric, limit):
+    def sort(self, metric: str, limit: int) -> list[TickerData]:
         """
         The sort data endpoint provides access to ordered rankings of stocks across core metrics
 
@@ -192,9 +295,10 @@ class Sentipy:
             "limit": limit
         }
         response = self.__base_request("sort", params=params)
-        return [Sentipy.TickerData(dp) for dp in response.get("results")]
+        return [TickerData(stock.get("symbol"), stock) for stock in response.get("results")] if response.get(
+            "success") else None
 
-    def historical(self, symbol, metric, start, end):
+    def historical(self, symbol: str, metric: str, start: int, end: int) -> dict[float, float]:
         """
         The historical data endpoint provides access to historical data for stocks
 
@@ -224,9 +328,10 @@ class Sentipy:
             "end": end
         }
         response = self.__base_request("historical", params=params)
-        return {dp.get("timestamp"): dp.get("data") for dp in response.get("results")}
+        return {dp.get("timestamp"): dp.get("data") for dp in response.get("results")} \
+            if response.get("success") else None
 
-    def bulk(self, symbols, enrich=False):
+    def bulk(self, symbols: list[str], enrich: bool = False) -> list[TickerData]:
         """
         Get quote data for several stocks simultaneously
         
@@ -243,9 +348,10 @@ class Sentipy:
             "enrich": enrich
         }
         response = self.__base_request("bulk", params=params)
-        return [Sentipy.TickerData(result) for result in response.get("results")]
+        return [TickerData(stock.get("symbol"), stock) for stock in response.get("results")] if response.get(
+            "success") else None
 
-    def all(self, enrich=False):
+    def all(self, enrich: bool = False) -> list[TickerData]:
         """
         Get all data for all stocks simultaneously. 
 
@@ -262,9 +368,10 @@ class Sentipy:
             "enrich": enrich
         }
         response = self.__base_request("all", params=params)
-        return [Sentipy.TickerData(result) for result in response.get("results")]
+        return [TickerData(stock.get("symbol"), stock) for stock in response.get("results")] if response.get(
+            "success") else None
 
-    def supported(self, symbol):
+    def supported(self, symbol: str):
         """
         Query whether SentimentInvestor has data for a specified stock
 
@@ -283,9 +390,10 @@ class Sentipy:
 
         .. versionadded:: 1.1.0
         """
-        return self.__base_request("supported", params={"symbol": symbol}).get("result")
+        response = self.__base_request("supported", params={"symbol": symbol})
+        return response.get("result") if response.get("success") else None
 
-    def all_stocks(self):
+    def all_stocks(self) -> set[str]:
         """
         Get a list of all stocks for which Sentiment gather data
 
@@ -293,36 +401,5 @@ class Sentipy:
 
         .. versionadded:: 1.1.0
         """
-        return self.__base_request("all-stocks").get("results")
-
-    class TickerData:
-        """
-        Specifies a basic data item for a specific ticker.
-
-        .. attention:: Do not try to initialise one yourself.
-
-        .. versionchanged:: 1.1.0
-        """
-
-        def __init__(self, json):
-            # for every metric returned in the json set it as an attribute for this object
-            for k, v in json.items():
-                # do not create a results parameter if present as this is handled by derived classes separately
-                if k == "results":
-                    continue
-                setattr(self, k, v)
-
-        def __str__(self):
-            return str({k: self.__getattribute__(k) for k in dir(self) if not k.startswith("__")})
-
-    class QuoteData(TickerData):
-        """
-        For a list of available metrics, use `dir(quoteDataObject)`
-
-        .. attention:: Returned by quote, do not try to initialise one yourself.
-        """
-
-        def __init__(self, json):
-            super().__init__(json)
-            for k, v in json.get("results").items():
-                setattr(self, k, v)
+        response = self.__base_request("all-stocks")
+        return set(response.get("results")) if response.get("success") else None
