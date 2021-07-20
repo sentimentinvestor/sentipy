@@ -1,110 +1,16 @@
-import dataclasses
+import enum
+import json
 from json import JSONDecodeError
+from types import SimpleNamespace
 from typing import Optional, Any
 
 import requests
 
-
-@dataclasses.dataclass
-class SocialData:
-    mentions: int
-    """The number of times given stock has been mentioned on social platform"""
-    sentiment: float
-    """The average sentiment score of remarks mentioning this stock"""
-    relative_hype: Optional[float]
-    """How many times more frequently has this stock been mentioned than other stocks"""
-
-    def __init__(self, results: dict[str, Any], platform: str):
-        self.mentions = results.get(f"{platform}_mentions")
-        self.sentiment = results.get(f"{platform}_sentiment")
-        self.relative_hype = results.get(f"{platform}_relative_hype")
-
-
-@dataclasses.dataclass
-class Subreddit:
-    mentions: int
-    """The number of times given stock has been mentioned on this subreddit"""
-    sentiment: float
-    """The average sentiment score of remarks mentioning this stock"""
-
-
-@dataclasses.dataclass
-class Reddit:
-    posts: SocialData
-    """Analysis for Reddit posts mentioning this ticker"""
-    comments: SocialData
-    """Analysis for Reddit comments mentioning this ticker"""
-    subreddits: dict[str, Subreddit]
-    """A dictionary of subreddits"""
-
-
-@dataclasses.dataclass
-class TickerData:
-    """
-    Specifies a basic data item for a specific ticker.
-
-    .. attention:: Do not try to initialise one yourself.
-
-    .. versionchanged:: 1.1.0
-    """
-
-    symbol: str
-    """Ticker symbol"""
-    sentiment: float
-    """Positive sentiment (%)"""
-    AHI: float
-    """Average Hype Index"""
-    RHI: float
-    """Relative Hype Index"""
-    SGP: float
-    """Standard General Perception"""
-
-    def __init__(self, symbol: str, results: dict):
-        self.symbol = symbol
-
-        for field in ['sentiment', 'AHI', 'RHI', 'SGP']:
-            setattr(self, field, results.get(field))
-
-
-@dataclasses.dataclass
-class QuoteData(TickerData):
-    """
-    .. attention:: Returned by quote, do not try to initialise one yourself.
-    """
-
-    reddit_data: Reddit
-    """Analysis for Reddit data"""
-    tweets: SocialData
-    """Analysis for Twitter"""
-    stocktwits_posts: SocialData
-    """Analysis for Stocktwits posts"""
-    yahoo_finance_comments: SocialData
-    """Analysis for Yahoo! Finance comments"""
-
-    def __init__(self, symbol: str, results: dict):
-        super().__init__(symbol, results)
-
-        for platform in ['tweet', 'stocktwits_post', 'yahoo_finance_comment']:
-            setattr(self, f"{platform}s", SocialData(results, platform))
-
-        subreddits_processed = None
-        if 'subreddits' in results:
-            subreddits = results.get("subreddits")
-            mentions = subreddits.get("reddit_subreddit_mentions")
-            sentiment = subreddits.get("reddit_subreddit_sentiment")
-            subreddits_processed = {
-                subreddit_name: Subreddit(
-                    mentions=mentions[subreddit_name],
-                    sentiment=sentiment[subreddit_name]
-                ) for subreddit_name in (mentions.keys() & sentiment.keys())
-            }
-
-        self.reddit_data = Reddit(
-            posts=SocialData(results, "reddit_post"),
-            comments=SocialData(results, "reddit_comment"),
-            subreddits=subreddits_processed
-        )
-
+class AccountTier(enum.Enum):
+    SANDBOX = 0
+    STARTER = 1
+    PREMIUM = 1.5
+    ENTERPRISE = 2
 
 class Sentipy:
     """
@@ -144,7 +50,7 @@ class Sentipy:
         self.token = token
         self.key = key
 
-    def __base_request(self, endpoint: str, params: dict[str, Any] = None) -> dict:
+    def __base_request(self, endpoint: str, params: dict[str, Any] = None) -> Any:
         """
         Make a request to a specific REST endpoint on the SentimentInvestor API
 
@@ -166,16 +72,16 @@ class Sentipy:
             raise ValueError("Incorrect key or token")
         else:
             try:
-                json = response.json()
+                data = json.loads(response.text, object_hook=lambda d: SimpleNamespace(**d))
             except JSONDecodeError:
                 raise Exception(response.text)
 
             if response.ok:
-                return json
+                return data
             else:
-                raise Exception(json.get("message"))
+                raise Exception(data.message)
 
-    def parsed(self, symbol: str) -> TickerData:
+    def parsed(self, symbol: str) -> SimpleNamespace:
         """
         The parsed data endpoints provides the four core metrics for a stock: AHI, RHI, SGP and sentiment.
 
@@ -194,10 +100,9 @@ class Sentipy:
         params = {
             "symbol": symbol
         }
-        response = self.__base_request("parsed", params=params)
-        return TickerData(response.get("symbol"), response.get("results")) if response.get("success") else None
+        return self.__base_request("parsed", params=params)
 
-    def raw(self, symbol: str) -> QuoteData:
+    def raw(self, symbol: str) -> SimpleNamespace:
         """
         The raw data endpoint provides access to raw data metrics for the monitored social platforms
 
@@ -211,10 +116,9 @@ class Sentipy:
         params = {
             "symbol": symbol
         }
-        response = self.__base_request("raw", params=params)
-        return QuoteData(response.get("symbol"), response.get("results")) if response.get("success") else None
+        return self.__base_request("raw", params=params)
 
-    def quote(self, symbol: str, enrich: bool = False) -> QuoteData:
+    def quote(self, symbol: str, enrich: bool = False) -> SimpleNamespace:
         """
         The quote data endpoint provides access to all realtime data about stocks along with further data if requested
 
@@ -265,10 +169,9 @@ class Sentipy:
             "symbol": symbol,
             "enrich": enrich
         }
-        response = self.__base_request("quote", params=params)
-        return QuoteData(response.get("symbol"), response.get("results")) if response.get("success") else None
+        return self.__base_request("quote", params=params)
 
-    def sort(self, metric: str, limit: int) -> list[TickerData]:
+    def sort(self, metric: str, limit: int) -> list[SimpleNamespace]:
         """
         The sort data endpoint provides access to ordered rankings of stocks across core metrics
 
@@ -294,11 +197,9 @@ class Sentipy:
             "metric": metric,
             "limit": limit
         }
-        response = self.__base_request("sort", params=params)
-        return [TickerData(stock.get("symbol"), stock) for stock in response.get("results")] if response.get(
-            "success") else None
+        return self.__base_request("sort", params=params)
 
-    def historical(self, symbol: str, metric: str, start: int, end: int) -> dict[float, float]:
+    def historical(self, symbol: str, metric: str, start: int, end: int) -> SimpleNamespace:
         """
         The historical data endpoint provides access to historical data for stocks
 
@@ -327,11 +228,9 @@ class Sentipy:
             "start": start,
             "end": end
         }
-        response = self.__base_request("historical", params=params)
-        return {dp.get("timestamp"): dp.get("data") for dp in response.get("results")} \
-            if response.get("success") else None
+        return self.__base_request("historical", params=params)
 
-    def bulk(self, symbols: list[str], enrich: bool = False) -> list[TickerData]:
+    def bulk(self, symbols: list[str], enrich: bool = False) -> list[SimpleNamespace]:
         """
         Get quote data for several stocks simultaneously
         
@@ -347,11 +246,9 @@ class Sentipy:
             "symbols": ",".join(symbols),
             "enrich": enrich
         }
-        response = self.__base_request("bulk", params=params)
-        return [TickerData(stock.get("symbol"), stock) for stock in response.get("results")] if response.get(
-            "success") else None
+        return self.__base_request("bulk", params=params)
 
-    def all(self, enrich: bool = False) -> list[TickerData]:
+    def all(self, enrich: bool = False) -> list[SimpleNamespace]:
         """
         Get all data for all stocks simultaneously. 
 
@@ -364,12 +261,8 @@ class Sentipy:
 
         .. versionadded:: 1.1.0
         """
-        params = {
-            "enrich": enrich
-        }
-        response = self.__base_request("all", params=params)
-        return [TickerData(stock.get("symbol"), stock) for stock in response.get("results")] if response.get(
-            "success") else None
+        params = {"enrich": enrich}
+        return self.__base_request("all", params=params)
 
     def supported(self, symbol: str):
         """
@@ -390,8 +283,7 @@ class Sentipy:
 
         .. versionadded:: 1.1.0
         """
-        response = self.__base_request("supported", params={"symbol": symbol})
-        return response.get("result") if response.get("success") else None
+        return self.__base_request("supported", params={"symbol": symbol})
 
     def all_stocks(self) -> set[str]:
         """
@@ -401,5 +293,12 @@ class Sentipy:
 
         .. versionadded:: 1.1.0
         """
-        response = self.__base_request("all-stocks")
-        return set(response.get("results")) if response.get("success") else None
+        return self.__base_request("all-stocks")
+
+    @property
+    def account_info(self) -> Optional[SimpleNamespace]:
+        return self.__base_request("account")
+
+    @property
+    def api_credentials(self):
+        return self.token, self.key
