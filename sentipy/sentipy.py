@@ -1,16 +1,46 @@
 import enum
 import json
-from json import JSONDecodeError
-from types import SimpleNamespace
-from typing import Optional, Any
+from typing import Optional, Any, Union
 
 import requests
+
 
 class AccountTier(enum.Enum):
     SANDBOX = 0
     STARTER = 1
     PREMIUM = 1.5
     ENTERPRISE = 2
+
+
+class _ApiResponse:
+    """
+    Specifies a basic data item for a specific ticker.
+    .. attention:: Do not try to initialise one yourself.
+    """
+
+    def __init__(self, json):
+        # for every metric returned in the json set it as an attribute for this object
+        for k, v in json.items():
+            # do not create a results parameter if present as this is handled by derived classes separately
+            if k == "results":
+                continue
+            setattr(self, k, v)
+
+    def __repr__(self) -> str:
+        return str(self.__dict__)
+
+
+class _ApiResult(_ApiResponse):
+    """
+    For a list of available metrics, use `dir(object)`
+    .. attention:: Returned by quote, do not try to initialise one yourself.
+    """
+
+    def __init__(self, json):
+        super().__init__(json)
+        for k, v in json.get("results").items():
+            setattr(self, k, v)
+
 
 class Sentipy:
     """
@@ -50,7 +80,7 @@ class Sentipy:
         self.token = token
         self.key = key
 
-    def __base_request(self, endpoint: str, params: dict[str, Any] = None) -> Any:
+    def _base_request(self, endpoint: str, params: dict[str, Any] = None) -> dict[str, Any]:
         """
         Make a request to a specific REST endpoint on the SentimentInvestor API
 
@@ -72,8 +102,8 @@ class Sentipy:
             raise ValueError("Incorrect key or token")
         else:
             try:
-                data = json.loads(response.text, object_hook=lambda d: SimpleNamespace(**d))
-            except JSONDecodeError:
+                data = response.json()
+            except json.JSONDecodeError:
                 raise Exception(response.text)
 
             if response.ok:
@@ -81,7 +111,7 @@ class Sentipy:
             else:
                 raise Exception(data.message)
 
-    def parsed(self, symbol: str) -> SimpleNamespace:
+    def parsed(self, symbol: str) -> _ApiResult:
         """
         The parsed data endpoints provides the four core metrics for a stock: AHI, RHI, SGP and sentiment.
 
@@ -95,14 +125,14 @@ class Sentipy:
             >>> print(parsed_data.AHI)
             0.8478140394088669
 
-        .. versionadded:: 1.1.0
+        .. versionadded:: 2.0.0
         """
         params = {
             "symbol": symbol
         }
-        return self.__base_request("parsed", params=params)
+        return _ApiResult(self._base_request("parsed", params=params))
 
-    def raw(self, symbol: str) -> SimpleNamespace:
+    def raw(self, symbol: str) -> _ApiResult:
         """
         The raw data endpoint provides access to raw data metrics for the monitored social platforms
 
@@ -111,14 +141,14 @@ class Sentipy:
 
         Returns: a QuoteData object
 
-        .. versionadded:: 1.1.0
+        .. versionadded:: 2.0.0
         """
         params = {
             "symbol": symbol
         }
-        return self.__base_request("raw", params=params)
+        return _ApiResult(self._base_request("raw", params=params))
 
-    def quote(self, symbol: str, enrich: bool = False) -> SimpleNamespace:
+    def quote(self, symbol: str, enrich: bool = False) -> _ApiResult:
         """
         The quote data endpoint provides access to all realtime data about stocks along with further data if requested
 
@@ -169,9 +199,9 @@ class Sentipy:
             "symbol": symbol,
             "enrich": enrich
         }
-        return self.__base_request("quote", params=params)
+        return _ApiResult(self._base_request("quote", params=params))
 
-    def sort(self, metric: str, limit: int) -> list[SimpleNamespace]:
+    def sort(self, metric: str, limit: int) -> list[_ApiResponse]:
         """
         The sort data endpoint provides access to ordered rankings of stocks across core metrics
 
@@ -197,9 +227,9 @@ class Sentipy:
             "metric": metric,
             "limit": limit
         }
-        return self.__base_request("sort", params=params)
+        return [_ApiResponse(dp) for dp in self._base_request("sort", params=params).get("results")]
 
-    def historical(self, symbol: str, metric: str, start: int, end: int) -> SimpleNamespace:
+    def historical(self, symbol: str, metric: str, start: int, end: int) -> dict[Union[int, float], Union[int, float]]:
         """
         The historical data endpoint provides access to historical data for stocks
 
@@ -228,9 +258,10 @@ class Sentipy:
             "start": start,
             "end": end
         }
-        return self.__base_request("historical", params=params)
+        return {dp.get("timestamp"): dp.get("data") for dp in
+                self._base_request("historical", params=params).get("results")}
 
-    def bulk(self, symbols: list[str], enrich: bool = False) -> list[SimpleNamespace]:
+    def bulk(self, symbols: list[str], enrich: bool = False) -> list[_ApiResponse]:
         """
         Get quote data for several stocks simultaneously
         
@@ -240,15 +271,15 @@ class Sentipy:
             
         Returns: a list of TickerData objects
 
-        .. versionadded:: 1.1.0
+        .. versionadded:: 2.0.0
         """
         params = {
             "symbols": ",".join(symbols),
             "enrich": enrich
         }
-        return self.__base_request("bulk", params=params)
+        return [_ApiResponse(result) for result in self._base_request("bulk", params=params).get("results")]
 
-    def all(self, enrich: bool = False) -> list[SimpleNamespace]:
+    def all(self, enrich: bool = False) -> list[_ApiResponse]:
         """
         Get all data for all stocks simultaneously. 
 
@@ -259,12 +290,12 @@ class Sentipy:
 
         Returns: a list of TickerData objects
 
-        .. versionadded:: 1.1.0
+        .. versionadded:: 2.0.0
         """
         params = {"enrich": enrich}
-        return self.__base_request("all", params=params)
+        return [_ApiResponse(result) for result in self._base_request("all", params=params).get("results")]
 
-    def supported(self, symbol: str):
+    def supported(self, symbol: str) -> bool:
         """
         Query whether SentimentInvestor has data for a specified stock
 
@@ -281,23 +312,23 @@ class Sentipy:
             TSLA is supported.
             SNTPY is not supported.
 
-        .. versionadded:: 1.1.0
+        .. versionadded:: 2.0.0
         """
-        return self.__base_request("supported", params={"symbol": symbol})
+        return self._base_request("supported", params={"symbol": symbol}).get("result")
 
     def all_stocks(self) -> set[str]:
         """
         Get a list of all stocks for which Sentiment gather data
 
-        Returns (iterable): list of stock symbols
+        Returns (set[str]): list of stock symbols
 
-        .. versionadded:: 1.1.0
+        .. versionadded:: 2.0.0
         """
-        return self.__base_request("all-stocks")
+        return set(self._base_request("all-stocks").get("results"))
 
     @property
-    def account_info(self) -> Optional[SimpleNamespace]:
-        return self.__base_request("account")
+    def account_info(self) -> Optional[_ApiResponse]:
+        return _ApiResponse(self._base_request("account"))
 
     @property
     def api_credentials(self):
