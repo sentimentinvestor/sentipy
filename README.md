@@ -4,10 +4,16 @@
 
 ## Installing
 
-SentiPy can be installed with [pip](https://pip.pypa.io/en/stable/)
+SentiPy can be installed with [pip](https://pip.pypa.io/en/stable/):
 
 ```
 $ python3 -m pip install sentiment-investor
+```
+
+On macOS, it can also be installed via [MacPorts](https://ports.macports.org/port/py-sentipy/):
+
+```
+$ sudo port install py-sentipy
 ```
 
 ## Setup
