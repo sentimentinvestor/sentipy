@@ -1,0 +1,2 @@
+# ignore vcr cassettes -- they are like cache: change frequently and do not need to be checked in
+vcr_cassettes/
