@@ -1,7 +1,8 @@
 import enum
 import json
 from typing import Optional, Any, Union
-from sentipy._typing_imports import DictType, ListType, SetType
+from sentipy._typing_imports import DictType, ListType, SetType, TupleType, JSONType
+from beartype import beartype
 
 import requests
 
@@ -19,7 +20,8 @@ class _ApiResponse:
     .. attention:: Do not try to initialise one yourself.
     """
 
-    def __init__(self, json):
+    @beartype
+    def __init__(self, json: JSONType) -> None:
         # for every metric returned in the json set it as an attribute for this object
         for k, v in json.items():
             # do not create a results parameter if present as this is handled by derived classes separately
@@ -37,7 +39,8 @@ class _ApiResult(_ApiResponse):
     .. attention:: Returned by quote, do not try to initialise one yourself.
     """
 
-    def __init__(self, json):
+    @beartype
+    def __init__(self, json: JSONType) -> None:
         super().__init__(json)
         for k, v in json.get("results").items():
             setattr(self, k, v)
@@ -58,7 +61,8 @@ class Sentipy:
     The base URL of the SentimentInvestor API
     """
 
-    def __init__(self, token: str = None, key: str = None):
+    @beartype
+    def __init__(self, token: str, key: str) -> None:
         """
         Initialise a new SentiPy instance with your token and key
 
@@ -74,14 +78,11 @@ class Sentipy:
         Raises:
             `ValueError` if either `token` or `key` not provided
         """
-        if token is None or key is None:
-            raise ValueError(
-                "Please provide a token and key - these can be obtained at "
-                "https://sentimentinvestor.com/developer/dashboard")
         self.token = token
         self.key = key
 
-    def _base_request(self, endpoint: str, params: DictType[str, Any] = None) -> DictType[str, Any]:
+    @beartype
+    def _base_request(self, endpoint: str, params: Optional[JSONType] = None) -> JSONType:
         """
         Make a request to a specific REST endpoint on the SentimentInvestor API
 
@@ -89,7 +90,7 @@ class Sentipy:
             endpoint (str): the REST endpoint (final fragment in URL)
             params (dict): any supplementary parameters to pass to the API
 
-        Returns: the JSON response if the request was successful, otherwise None
+        Returns: the JSON response if the request was successful, otherwise an exception is raised.
 
         """
         if params is None:
@@ -112,6 +113,7 @@ class Sentipy:
             else:
                 raise Exception(data['message'])
 
+    @beartype
     def parsed(self, symbol: str) -> _ApiResult:
         """
         The parsed data endpoints provides the four core metrics for a stock: AHI, RHI, SGP and sentiment.
@@ -120,7 +122,7 @@ class Sentipy:
             symbol (str): string specifying the ticker or symbol of the stock to request data for
 
         Returns: a QuoteData object
-        
+
         Examples:
             >>> parsed_data = sentipy.parsed("AAPL")
             >>> print(parsed_data.AHI)
@@ -133,6 +135,7 @@ class Sentipy:
         }
         return _ApiResult(self._base_request("parsed", params=params))
 
+    @beartype
     def raw(self, symbol: str) -> _ApiResult:
         """
         The raw data endpoint provides access to raw data metrics for the monitored social platforms
@@ -149,6 +152,7 @@ class Sentipy:
         }
         return _ApiResult(self._base_request("raw", params=params))
 
+    @beartype
     def quote(self, symbol: str, enrich: bool = False) -> _ApiResult:
         """
         The quote data endpoint provides access to all realtime data about stocks along with further data if requested
@@ -202,6 +206,7 @@ class Sentipy:
         }
         return _ApiResult(self._base_request("quote", params=params))
 
+    @beartype
     def sort(self, metric: str, limit: int) -> ListType[_ApiResponse]:
         """
         The sort data endpoint provides access to ordered rankings of stocks across core metrics
@@ -230,6 +235,7 @@ class Sentipy:
         }
         return [_ApiResponse(dp) for dp in self._base_request("sort", params=params).get("results")]
 
+    @beartype
     def historical(self, symbol: str, metric: str, start: int, end: int) -> DictType[Union[int, float], Union[int, float]]:
         """
         The historical data endpoint provides access to historical data for stocks
@@ -262,14 +268,15 @@ class Sentipy:
         return {dp.get("timestamp"): dp.get("data") for dp in
                 self._base_request("historical", params=params).get("results")}
 
+    @beartype
     def bulk(self, symbols: ListType[str], enrich: bool = False) -> ListType[_ApiResponse]:
         """
         Get quote data for several stocks simultaneously
-        
+
         Args:
             symbols (iterable): list of stocks to get quote data for
             enrich (bool): whether to get enriched data
-            
+
         Returns: a list of TickerData objects
 
         .. versionadded:: 2.0.0
@@ -280,9 +287,10 @@ class Sentipy:
         }
         return [_ApiResponse(result) for result in self._base_request("bulk", params=params).get("results")]
 
+    @beartype
     def all(self, enrich: bool = False) -> ListType[_ApiResponse]:
         """
-        Get all data for all stocks simultaneously. 
+        Get all data for all stocks simultaneously.
 
         .. note:: this blocking call takes a long time to execute.
 
@@ -296,6 +304,7 @@ class Sentipy:
         params = {"enrich": enrich}
         return [_ApiResponse(result) for result in self._base_request("all", params=params).get("results")]
 
+    @beartype
     def supported(self, symbol: str) -> bool:
         """
         Query whether SentimentInvestor has data for a specified stock
@@ -315,8 +324,10 @@ class Sentipy:
 
         .. versionadded:: 2.0.0
         """
-        return self._base_request("supported", params={"symbol": symbol}).get("result")
+        # Assume results always returns a bool
+        return self._base_request("supported", params={"symbol": symbol}).get("results")  # type: ignore[no-any-return]
 
+    @beartype
     def all_stocks(self) -> SetType[str]:
         """
         Get a list of all stocks for which Sentiment gather data
@@ -327,10 +338,13 @@ class Sentipy:
         """
         return set(self._base_request("all-stocks").get("results"))
 
-    @property
+    # mypy doesn't support decorated properties
+    @property  # type: ignore[misc]
+    @beartype
     def account_info(self) -> Optional[_ApiResponse]:
         return _ApiResponse(self._base_request("account"))
 
-    @property
-    def api_credentials(self):
+    @property  # type: ignore[misc]
+    @beartype
+    def api_credentials(self) -> TupleType[str, str]:
         return self.token, self.key
