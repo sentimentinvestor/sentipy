@@ -1,6 +1,7 @@
 import enum
 import json
 from typing import Optional, Any, Union
+from sentipy._typing_imports import DictType, ListType, SetType
 
 import requests
 
@@ -80,7 +81,7 @@ class Sentipy:
         self.token = token
         self.key = key
 
-    def _base_request(self, endpoint: str, params: dict[str, Any] = None) -> dict[str, Any]:
+    def _base_request(self, endpoint: str, params: DictType[str, Any] = None) -> DictType[str, Any]:
         """
         Make a request to a specific REST endpoint on the SentimentInvestor API
 
@@ -201,7 +202,7 @@ class Sentipy:
         }
         return _ApiResult(self._base_request("quote", params=params))
 
-    def sort(self, metric: str, limit: int) -> list[_ApiResponse]:
+    def sort(self, metric: str, limit: int) -> ListType[_ApiResponse]:
         """
         The sort data endpoint provides access to ordered rankings of stocks across core metrics
 
@@ -229,7 +230,7 @@ class Sentipy:
         }
         return [_ApiResponse(dp) for dp in self._base_request("sort", params=params).get("results")]
 
-    def historical(self, symbol: str, metric: str, start: int, end: int) -> dict[Union[int, float], Union[int, float]]:
+    def historical(self, symbol: str, metric: str, start: int, end: int) -> DictType[Union[int, float], Union[int, float]]:
         """
         The historical data endpoint provides access to historical data for stocks
 
@@ -261,7 +262,7 @@ class Sentipy:
         return {dp.get("timestamp"): dp.get("data") for dp in
                 self._base_request("historical", params=params).get("results")}
 
-    def bulk(self, symbols: list[str], enrich: bool = False) -> list[_ApiResponse]:
+    def bulk(self, symbols: ListType[str], enrich: bool = False) -> ListType[_ApiResponse]:
         """
         Get quote data for several stocks simultaneously
         
@@ -279,7 +280,7 @@ class Sentipy:
         }
         return [_ApiResponse(result) for result in self._base_request("bulk", params=params).get("results")]
 
-    def all(self, enrich: bool = False) -> list[_ApiResponse]:
+    def all(self, enrich: bool = False) -> ListType[_ApiResponse]:
         """
         Get all data for all stocks simultaneously. 
 
@@ -316,7 +317,7 @@ class Sentipy:
         """
         return self._base_request("supported", params={"symbol": symbol}).get("result")
 
-    def all_stocks(self) -> set[str]:
+    def all_stocks(self) -> SetType[str]:
         """
         Get a list of all stocks for which Sentiment gather data
 
