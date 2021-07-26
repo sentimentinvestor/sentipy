@@ -110,7 +110,7 @@ class Sentipy:
             if response.ok:
                 return data
             else:
-                raise Exception(data.message)
+                raise Exception(data['message'])
 
     def parsed(self, symbol: str) -> _ApiResult:
         """
