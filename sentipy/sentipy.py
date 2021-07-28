@@ -1,10 +1,11 @@
 import enum
 import json
-from typing import Optional, Any, Union
-from sentipy._typing_imports import DictType, ListType, SetType, TupleType, JSONType
-from beartype import beartype
+from typing import Optional, Union
 
 import requests
+from beartype import beartype
+
+from sentipy._typing_imports import DictType, JSONType, ListType, SetType, TupleType
 
 
 class AccountTier(enum.Enum):
@@ -82,7 +83,9 @@ class Sentipy:
         self.key = key
 
     @beartype
-    def _base_request(self, endpoint: str, params: Optional[JSONType] = None) -> JSONType:
+    def _base_request(
+        self, endpoint: str, params: Optional[JSONType] = None
+    ) -> JSONType:
         """
         Make a request to a specific REST endpoint on the SentimentInvestor API
 
@@ -99,8 +102,10 @@ class Sentipy:
         params["token"] = self.token
         params["key"] = self.key
         response = requests.get(url, params)
-        if response.content.decode("utf-8") == 'invalid_parameter' \
-                or response.content.decode("utf-8") == 'incorrect_key':
+        if (
+            response.content.decode("utf-8") == "invalid_parameter"
+            or response.content.decode("utf-8") == "incorrect_key"
+        ):
             raise ValueError("Incorrect key or token")
         else:
             try:
@@ -111,7 +116,7 @@ class Sentipy:
             if response.ok:
                 return data
             else:
-                raise Exception(data['message'])
+                raise Exception(data["message"])
 
     @beartype
     def parsed(self, symbol: str) -> _ApiResult:
@@ -130,9 +135,7 @@ class Sentipy:
 
         .. versionadded:: 2.0.0
         """
-        params = {
-            "symbol": symbol
-        }
+        params = {"symbol": symbol}
         return _ApiResult(self._base_request("parsed", params=params))
 
     @beartype
@@ -147,9 +150,7 @@ class Sentipy:
 
         .. versionadded:: 2.0.0
         """
-        params = {
-            "symbol": symbol
-        }
+        params = {"symbol": symbol}
         return _ApiResult(self._base_request("raw", params=params))
 
     @beartype
@@ -200,10 +201,7 @@ class Sentipy:
                                             'stocks': 0.8,
                                             'wallstreetbets': 0.5}}
         """
-        params = {
-            "symbol": symbol,
-            "enrich": enrich
-        }
+        params = {"symbol": symbol, "enrich": enrich}
         return _ApiResult(self._base_request("quote", params=params))
 
     @beartype
@@ -229,14 +227,16 @@ class Sentipy:
             {'AHI': 1.3133928571428573, 'RHI': 1.0435689663713186, 'rank': 2, 'reddit_comment_mentions': 58, 'reddit_post_mentions': 0, 'sentiment': 0.7033474218089603, 'stocktwits_post_mentions': 262, 'subreddits': {'symbol': 'SPY'}, 'symbol': 'SPY', 'tweet_mentions': 20, 'yahoo_finance_comment_mentions': 3}
             {'AHI': 0.8098830049261084, 'RHI': 1.4870815942458393, 'rank': 3, 'reddit_comment_mentions': 62, 'reddit_post_mentions': 0, 'sentiment': 0.7574809805579037, 'stocktwits_post_mentions': 113, 'subreddits': {'symbol': 'AAPL'}, 'symbol': 'AAPL', 'tweet_mentions': 20, 'yahoo_finance_comment_mentions': 13}
         """
-        params = {
-            "metric": metric,
-            "limit": limit
-        }
-        return [_ApiResponse(dp) for dp in self._base_request("sort", params=params).get("results")]
+        params = {"metric": metric, "limit": limit}
+        return [
+            _ApiResponse(dp)
+            for dp in self._base_request("sort", params=params).get("results")
+        ]
 
     @beartype
-    def historical(self, symbol: str, metric: str, start: int, end: int) -> DictType[Union[int, float], Union[int, float]]:
+    def historical(
+        self, symbol: str, metric: str, start: int, end: int
+    ) -> DictType[Union[int, float], Union[int, float]]:
         """
         The historical data endpoint provides access to historical data for stocks
 
@@ -259,17 +259,16 @@ class Sentipy:
             (...lots of lines omitted)
 
         """
-        params = {
-            "symbol": symbol,
-            "metric": metric,
-            "start": start,
-            "end": end
+        params = {"symbol": symbol, "metric": metric, "start": start, "end": end}
+        return {
+            dp.get("timestamp"): dp.get("data")
+            for dp in self._base_request("historical", params=params).get("results")
         }
-        return {dp.get("timestamp"): dp.get("data") for dp in
-                self._base_request("historical", params=params).get("results")}
 
     @beartype
-    def bulk(self, symbols: ListType[str], enrich: bool = False) -> ListType[_ApiResponse]:
+    def bulk(
+        self, symbols: ListType[str], enrich: bool = False
+    ) -> ListType[_ApiResponse]:
         """
         Get quote data for several stocks simultaneously
 
@@ -281,11 +280,11 @@ class Sentipy:
 
         .. versionadded:: 2.0.0
         """
-        params = {
-            "symbols": ",".join(symbols),
-            "enrich": enrich
-        }
-        return [_ApiResponse(result) for result in self._base_request("bulk", params=params).get("results")]
+        params = {"symbols": ",".join(symbols), "enrich": enrich}
+        return [
+            _ApiResponse(result)
+            for result in self._base_request("bulk", params=params).get("results")
+        ]
 
     @beartype
     def all(self, enrich: bool = False) -> ListType[_ApiResponse]:
@@ -302,7 +301,10 @@ class Sentipy:
         .. versionadded:: 2.0.0
         """
         params = {"enrich": enrich}
-        return [_ApiResponse(result) for result in self._base_request("all", params=params).get("results")]
+        return [
+            _ApiResponse(result)
+            for result in self._base_request("all", params=params).get("results")
+        ]
 
     @beartype
     def supported(self, symbol: str) -> bool:
