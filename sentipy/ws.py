@@ -3,13 +3,32 @@ import json
 import logging
 import sys
 
-import websocket
+# websocket comes with no type hints
+from websocket import WebSocketApp  # type: ignore[import]
+from beartype import beartype
 
-try:
-    import thread
-except ImportError:
-    import _thread as thread
+from ._typing_imports import DictType, IterableType
+from typing import Optional, Callable
 
+# TODO: Refactor to use the threading library
+import _thread as thread
+
+
+# Defined at the top since it's used in type annotations
+class StockUpdateData:
+    @beartype
+    def __init__(self, message: str) -> None:
+        """
+        Initialise a new data container for the stock update
+
+        Args:
+            A JSON string returned by the websocket server
+        """
+        for k, v in json.loads(message).items():
+            setattr(self, k, v)
+
+# Used to add type annotations for callable arguments
+CallableType = Callable[[StockUpdateData], None]
 
 class _Stream:
     """
@@ -21,10 +40,11 @@ class _Stream:
     WebSocket url to connect to
     """
 
-    __params = {}
+    __params: DictType[str, str]  = {}
     __ws = None
 
-    def __init__(self, token, key, callback, fragment):
+    @beartype
+    def __init__(self, token: str, key: str, callback: CallableType, fragment: str) -> None:
         """
         Initialise a new web socket stream
 
@@ -37,10 +57,6 @@ class _Stream:
         Raises:
             ValueError: if token or key is omitted
         """
-        if token is None or key is None:
-            raise ValueError(
-                "Please provide a token and key - these can be obtained at "
-                "https://sentimentinvestor.com/developer/dashboard")
         self.__params["key"] = key
         self.__params["token"] = token
 
@@ -49,20 +65,24 @@ class _Stream:
 
         self.__connect()
 
-    def __send_key(self, *args):
+    @beartype
+    def __send_key(self, *args: str) -> None:
         if self.__ws is None:
             return
         # send authentication token and key + any necessary parameters
         self.__ws.send(json.dumps(self.__params))
 
-    def __on_open(self, ws):
+    @beartype
+    def __on_open(self, ws: WebSocketApp) -> None:
         logging.info("WebSocket opened")
         thread.start_new_thread(self.__send_key, ())
 
-    def __on_error(self, ws, error):
+    @beartype
+    def __on_error(self, ws: WebSocketApp, error: str) -> None:
         logging.error(f"WebSocket error {error}")
 
-    def __on_close(self, ws, close_status_code, close_msg):
+    @beartype
+    def __on_close(self, ws: WebSocketApp, close_status_code: int, close_msg: str) -> None:
         logging.warning(f"WebSocket closed with status code {close_status_code}. Info provided: {close_msg}")
 
         # reconnect
@@ -73,7 +93,8 @@ class _Stream:
             logging.info("Not reconnecting WebSocket")
             sys.exit()
 
-    def __on_message(self, ws, message):
+    @beartype
+    def __on_message(self, ws: WebSocketApp, message: str) -> None:
         logging.debug(message)
         response = json.loads(message)
         if "authState" in response:
@@ -88,20 +109,20 @@ class _Stream:
         else:
             self.__user_callback(StockUpdateData(message))
 
-    def __connect(self):
-        if self.__fragment is None:
-            raise Exception("Use StocksStream or AllStocksStream, cannot use Stream base class!")
+    @beartype
+    def __connect(self) -> None:
 
         # initialise websocket
-        self.__ws = websocket.WebSocketApp(self.base_url + self.__fragment,
-                                           on_open=self.__on_open,
-                                           on_error=self.__on_error,
-                                           on_close=self.__on_close,
-                                           on_message=self.__on_message)
+        self.__ws = WebSocketApp(self.base_url + self.__fragment,
+                                 on_open=self.__on_open,
+                                 on_error=self.__on_error,
+                                 on_close=self.__on_close,
+                                 on_message=self.__on_message)
 
         self.__ws.run_forever(ping_interval=30, ping_timeout=10, ping_payload="ping")
 
-    def reconnect(self):
+    @beartype
+    def reconnect(self) -> None:
         """
         Manually request a websocket reconnection.
         This should not usually be necessary as Sentipy will try to reconnect automatically if connection is lost
@@ -111,7 +132,8 @@ class _Stream:
 
 class StocksStream(_Stream):
 
-    def __init__(self, symbols=None, token=None, key=None, callback=None):
+    @beartype
+    def __init__(self, token: str, key: str, callback: CallableType, symbols: Optional[IterableType[str]] = None) -> None:
         """
         Initialise a new WebSocket listener for specific stocks
 
@@ -128,7 +150,8 @@ class StocksStream(_Stream):
 
 class AllStocksStream(_Stream):
 
-    def __init__(self, token=None, key=None, callback=None):
+    @beartype
+    def __init__(self, token: str, key: str, callback: CallableType) -> None:
         """
         Initialise a new WebSocket listener for all available stocks
 
@@ -139,15 +162,3 @@ class AllStocksStream(_Stream):
             that will be called when a stock update is received
         """
         super(AllStocksStream, self).__init__(token, key, callback, "all")
-
-
-class StockUpdateData:
-    def __init__(self, message):
-        """
-        Initialise a new data container for the stock update
-
-        Args:
-            A JSON string returned by the websocket server
-        """
-        for k, v in json.loads(message).items():
-            setattr(self, k, v)

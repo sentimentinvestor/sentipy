@@ -5,6 +5,7 @@ description = "Access the Sentiment Investor API through Python"
 authors = ["Robert Stok <rs.stok@gmail.com>"]
 readme = "README.md"
 license = "MIT"
+include = ["sentipy/py.typed"]
 
 homepage = "https://sentimentinvestor.com/"
 repository = "https://github.com/sentimentinvestor/sentipy"
@@ -17,8 +18,11 @@ documentation = "https://docs.sentimentinvestor.com/python/"
 python = "^3.8"
 requests = "^2.26.0"
 websocket-client = "^1.1.0"
+beartype = "^0.7.1"
 
 [tool.poetry.dev-dependencies]
+mypy = "^0.910"
+types-requests = "^2.25.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
