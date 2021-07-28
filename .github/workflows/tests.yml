@@ -1,4 +1,4 @@
-name: Type Checking
+name: Tests
 on: [push, pull_request]
 
 jobs:
@@ -21,3 +21,7 @@ jobs:
           poetry install
       - name: Run mypy
         run: poetry run mypy --strict sentipy
+      - name: Check formatting
+        run: |
+          poetry run black --check .
+          poetry run isort --check-only .
