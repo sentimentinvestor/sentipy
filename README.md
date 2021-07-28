@@ -24,6 +24,20 @@ To use this package you will need a developer token and key, which can be obtain
 
 SentiPy has usage and reference documentation at [sentimentinvestor.com/developer/python-docs](https://sentimentinvestor.com/developer/python-docs).
 
+## 🤝 Contributing
+
+Contributions, issues and feature requests are welcome!<br />Feel free to check the [issues page](https://github.com/sentimentinvestor/sentipy/issues).
+
+### Authors
+
+The following people have made notable contributions to the development of this library (in chronological order):
+
+- [Rob Stock](https://github.com/lipton-green-tea)
+- [Timothy Langer](https://github.com/ZeevoX)
+- [Haren S](https://github.com/harens)
+
+The full list of contributors is [here](https://github.com/sentimentinvestor/sentipy/graphs/contributors).
+
 ## Licence
 
 SentiPy is made available under the MIT Licence. For more details, see [LICENSE.txt](https://github.com/sentimentinvestor/sentipy/blob/master/LICENSE).
