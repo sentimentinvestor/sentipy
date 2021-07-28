@@ -28,6 +28,19 @@ SentiPy has usage and reference documentation at [sentimentinvestor.com/develope
 
 Contributions, issues and feature requests are welcome!<br />Feel free to check the [issues page](https://github.com/sentimentinvestor/sentipy/issues).
 
+### Geting Started
+
+First, fork the [GitHub project](https://github.com/sentimentinvestor/sentipy) to your account. Then, run the following with your GitHub handle in place of `INSERT_GITHUB_NAME`:
+
+```sh
+$ git clone https://github.com/INSERT_GITHUB_NAME/sentipy
+$ cd sentipy
+$ poetry install && poetry shell
+$ pre-commit install
+```
+
+This then runs the formatters when you're about to commit any changes.
+
 ### Authors
 
 The following people have made notable contributions to the development of this library (in chronological order):

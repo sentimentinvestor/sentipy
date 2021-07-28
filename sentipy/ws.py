@@ -1,17 +1,17 @@
+# TODO: Refactor to use the threading library
+import _thread as thread
 import datetime
 import json
 import logging
 import sys
+from typing import Callable, Optional
+
+from beartype import beartype
 
 # websocket comes with no type hints
 from websocket import WebSocketApp  # type: ignore[import]
-from beartype import beartype
 
 from ._typing_imports import DictType, IterableType
-from typing import Optional, Callable
-
-# TODO: Refactor to use the threading library
-import _thread as thread
 
 
 # Defined at the top since it's used in type annotations
@@ -27,8 +27,10 @@ class StockUpdateData:
         for k, v in json.loads(message).items():
             setattr(self, k, v)
 
+
 # Used to add type annotations for callable arguments
 CallableType = Callable[[StockUpdateData], None]
+
 
 class _Stream:
     """
@@ -40,11 +42,13 @@ class _Stream:
     WebSocket url to connect to
     """
 
-    __params: DictType[str, str]  = {}
+    __params: DictType[str, str] = {}
     __ws = None
 
     @beartype
-    def __init__(self, token: str, key: str, callback: CallableType, fragment: str) -> None:
+    def __init__(
+        self, token: str, key: str, callback: CallableType, fragment: str
+    ) -> None:
         """
         Initialise a new web socket stream
 
@@ -82,8 +86,12 @@ class _Stream:
         logging.error(f"WebSocket error {error}")
 
     @beartype
-    def __on_close(self, ws: WebSocketApp, close_status_code: int, close_msg: str) -> None:
-        logging.warning(f"WebSocket closed with status code {close_status_code}. Info provided: {close_msg}")
+    def __on_close(
+        self, ws: WebSocketApp, close_status_code: int, close_msg: str
+    ) -> None:
+        logging.warning(
+            f"WebSocket closed with status code {close_status_code}. Info provided: {close_msg}"
+        )
 
         # reconnect
         self.__ws = None
@@ -103,9 +111,14 @@ class _Stream:
                 raise ValueError("Not authenticated or invalid request")
             else:
                 time_formatted = datetime.datetime.utcfromtimestamp(
-                    response['timestamp'] / 1000).strftime('%Y-%m-%d %H:%M:%S')
-                logging.info(f"WebSocket authentication successful as of {time_formatted}")
-                logging.info(f"Subscribed to the following stocks: {', '.join(response['subscribedTo'])}")
+                    response["timestamp"] / 1000
+                ).strftime("%Y-%m-%d %H:%M:%S")
+                logging.info(
+                    f"WebSocket authentication successful as of {time_formatted}"
+                )
+                logging.info(
+                    f"Subscribed to the following stocks: {', '.join(response['subscribedTo'])}"
+                )
         else:
             self.__user_callback(StockUpdateData(message))
 
@@ -113,11 +126,13 @@ class _Stream:
     def __connect(self) -> None:
 
         # initialise websocket
-        self.__ws = WebSocketApp(self.base_url + self.__fragment,
-                                 on_open=self.__on_open,
-                                 on_error=self.__on_error,
-                                 on_close=self.__on_close,
-                                 on_message=self.__on_message)
+        self.__ws = WebSocketApp(
+            self.base_url + self.__fragment,
+            on_open=self.__on_open,
+            on_error=self.__on_error,
+            on_close=self.__on_close,
+            on_message=self.__on_message,
+        )
 
         self.__ws.run_forever(ping_interval=30, ping_timeout=10, ping_payload="ping")
 
@@ -131,9 +146,14 @@ class _Stream:
 
 
 class StocksStream(_Stream):
-
     @beartype
-    def __init__(self, token: str, key: str, callback: CallableType, symbols: Optional[IterableType[str]] = None) -> None:
+    def __init__(
+        self,
+        token: str,
+        key: str,
+        callback: CallableType,
+        symbols: Optional[IterableType[str]] = None,
+    ) -> None:
         """
         Initialise a new WebSocket listener for specific stocks
 
@@ -145,11 +165,10 @@ class StocksStream(_Stream):
             that will be called when a stock update is received
         """
         self.__params["symbols"] = list(symbols) if symbols is not None else []
-        super(StocksStream, self).__init__(token, key, callback, "stocks")
+        super().__init__(token, key, callback, "stocks")
 
 
 class AllStocksStream(_Stream):
-
     @beartype
     def __init__(self, token: str, key: str, callback: CallableType) -> None:
         """
@@ -161,4 +180,4 @@ class AllStocksStream(_Stream):
             callback: a function taking one argument, a StockUpdateData object,
             that will be called when a stock update is received
         """
-        super(AllStocksStream, self).__init__(token, key, callback, "all")
+        super().__init__(token, key, callback, "all")
