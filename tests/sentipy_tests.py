@@ -6,7 +6,7 @@ import unittest
 import vcr  # type: ignore[import]
 from beartype import beartype
 
-from sentipy._typing_imports import DictType, ListType
+from sentipy._typing_imports import ListType
 from sentipy.sentipy import Sentipy
 
 
@@ -31,13 +31,13 @@ class SentipyTestCase(unittest.TestCase):
         )
 
     @beartype
-    def assertHasAttr(self, object: DictType[str, str], attr: str) -> None:
+    def assertHasAttr(self, object: object, attr: str) -> None:
         self.assertTrue(
             hasattr(object, attr), f"{object!r} does not have attribute {attr!r}"
         )
 
     @beartype
-    def assertHasAttrs(self, object: DictType[str, str], attrs: ListType[str]) -> None:
+    def assertHasAttrs(self, object: object, attrs: ListType[str]) -> None:
         for attr in attrs:
             self.assertHasAttr(object, attr)
 
