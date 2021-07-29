@@ -1,3 +1,10 @@
+"""The Sentiment Investor Python Client library.
+
+This provides the main Senipy object, through which you can authenticate yourself.
+
+For more information, please visit https://docs.sentimentinvestor.com/python/
+"""
+
 import enum
 import json
 from typing import Optional, Union
@@ -9,6 +16,8 @@ from sentipy._typing_imports import DictType, JSONType, ListType, SetType, Tuple
 
 
 class AccountTier(enum.Enum):
+    """Defines which tier the user's Sentiment Investor account is."""
+
     SANDBOX = 0
     STARTER = 1
     PREMIUM = 1.5
@@ -16,8 +25,8 @@ class AccountTier(enum.Enum):
 
 
 class _ApiResponse:
-    """
-    Specifies a basic data item for a specific ticker.
+    """Specifies a basic data item for a specific ticker.
+
     .. attention:: Do not try to initialise one yourself.
     """
 
@@ -35,8 +44,8 @@ class _ApiResponse:
 
 
 class _ApiResult(_ApiResponse):
-    """
-    For a list of available metrics, use `dir(object)`
+    """For a list of available metrics, use `dir(object)`.
+
     .. attention:: Returned by quote, do not try to initialise one yourself.
     """
 
@@ -48,14 +57,7 @@ class _ApiResult(_ApiResponse):
 
 
 class Sentipy:
-    """
-    The Sentipy module provides a simple and lightweight way to interact with the SentimentInvestor API and data.
-
-    Sentipy is installed through [pip](https://pip.pypa.io/)
-    ```
-    $ python3 -m pip install sentiment-investor
-    ```
-    """
+    """This defines the main Sentipy object through which the user authenticates themselves."""
 
     base_url = r"https://api.sentimentinvestor.com/v4/"
     """
@@ -64,8 +66,7 @@ class Sentipy:
 
     @beartype
     def __init__(self, token: str, key: str) -> None:
-        """
-        Initialise a new SentiPy instance with your token and key
+        """Initialise a new SentiPy instance with your token and key.
 
         Examples:
             >>> token = "my-very-secret-token"
@@ -73,8 +74,8 @@ class Sentipy:
             >>> sentipy = Sentipy(token=token, key=key)
 
         Args:
-            token (str): API token from the SentimentInvestor website
-            key (str): API key from the SentimentInvestor website
+            token: API token from the SentimentInvestor website
+            key: API key from the SentimentInvestor website
 
         Raises:
             `ValueError` if either `token` or `key` not provided
@@ -86,12 +87,11 @@ class Sentipy:
     def _base_request(
         self, endpoint: str, params: Optional[JSONType] = None
     ) -> JSONType:
-        """
-        Make a request to a specific REST endpoint on the SentimentInvestor API
+        """Make a request to a specific REST endpoint on the SentimentInvestor API.
 
         Args:
-            endpoint (str): the REST endpoint (final fragment in URL)
-            params (dict): any supplementary parameters to pass to the API
+            endpoint: the REST endpoint (final fragment in URL)
+            params: any supplementary parameters to pass to the API
 
         Returns: the JSON response if the request was successful, otherwise an exception is raised.
 
@@ -120,11 +120,10 @@ class Sentipy:
 
     @beartype
     def parsed(self, symbol: str) -> _ApiResult:
-        """
-        The parsed data endpoints provides the four core metrics for a stock: AHI, RHI, SGP and sentiment.
+        """The parsed data endpoints provides the four core metrics for a stock: AHI, RHI, SGP and sentiment.
 
         Args:
-            symbol (str): string specifying the ticker or symbol of the stock to request data for
+            symbol: string specifying the ticker or symbol of the stock to request data for
 
         Returns: a QuoteData object
 
@@ -140,11 +139,10 @@ class Sentipy:
 
     @beartype
     def raw(self, symbol: str) -> _ApiResult:
-        """
-        The raw data endpoint provides access to raw data metrics for the monitored social platforms
+        """The raw data endpoint provides access to raw data metrics for the monitored social platforms.
 
         Args:
-            symbol (str): ticker or symbol of the stock to request data for
+            symbol: ticker or symbol of the stock to request data for
 
         Returns: a QuoteData object
 
@@ -155,12 +153,11 @@ class Sentipy:
 
     @beartype
     def quote(self, symbol: str, enrich: bool = False) -> _ApiResult:
-        """
-        The quote data endpoint provides access to all realtime data about stocks along with further data if requested
+        """The quote data endpoint provides access to all realtime data about stocks along with further data if requested.
 
         Args:
-            symbol (str): ticker or symbol of the stock to request data for
-            enrich (bool): whether to request enriched data
+            symbol: ticker or symbol of the stock to request data for
+            enrich: whether to request enriched data
 
         Returns: a QuoteData object
 
@@ -206,12 +203,11 @@ class Sentipy:
 
     @beartype
     def sort(self, metric: str, limit: int) -> ListType[_ApiResponse]:
-        """
-        The sort data endpoint provides access to ordered rankings of stocks across core metrics
+        """The sort data endpoint provides access to ordered rankings of stocks across core metrics.
 
         Args:
-            metric (str): the metric by which to sort the stocks
-            limit (int): the maximum number of stocks to return
+            metric: the metric by which to sort the stocks
+            limit: the maximum number of stocks to return
 
         Returns: a list of TickerData objects
 
@@ -237,14 +233,13 @@ class Sentipy:
     def historical(
         self, symbol: str, metric: str, start: int, end: int
     ) -> DictType[Union[int, float], Union[int, float]]:
-        """
-        The historical data endpoint provides access to historical data for stocks
+        """The historical data endpoint provides access to historical data for stocks.
 
         Args:
-            symbol (str): the stock to look up historical data for
-            metric (str): the metric for which to return data
-            start (int): Unix epoch timestamp in seconds specifying start of date range
-            end (int): Unix epoch timestamp in seconds specifying end of date range
+            symbol: the stock to look up historical data for
+            metric: the metric for which to return data
+            start: Unix epoch timestamp in seconds specifying start of date range
+            end: Unix epoch timestamp in seconds specifying end of date range
 
         Returns (dict): a dictionary of (timestamp -> data entry) mappings.
 
@@ -269,12 +264,11 @@ class Sentipy:
     def bulk(
         self, symbols: ListType[str], enrich: bool = False
     ) -> ListType[_ApiResponse]:
-        """
-        Get quote data for several stocks simultaneously
+        """Get quote data for several stocks simultaneously.
 
         Args:
-            symbols (iterable): list of stocks to get quote data for
-            enrich (bool): whether to get enriched data
+            symbols: list of stocks to get quote data for
+            enrich: whether to get enriched data
 
         Returns: a list of TickerData objects
 
@@ -288,13 +282,12 @@ class Sentipy:
 
     @beartype
     def all(self, enrich: bool = False) -> ListType[_ApiResponse]:
-        """
-        Get all data for all stocks simultaneously.
+        """Get all data for all stocks simultaneously.
 
         .. note:: this blocking call takes a long time to execute.
 
         Args:
-            enrich (bool): whether to fetch enriched data
+            enrich: whether to fetch enriched data
 
         Returns: a list of TickerData objects
 
@@ -308,11 +301,10 @@ class Sentipy:
 
     @beartype
     def supported(self, symbol: str) -> bool:
-        """
-        Query whether SentimentInvestor has data for a specified stock
+        """Query whether SentimentInvestor has data for a specified stock.
 
         Args:
-            symbol (str): stock ticker symbol to query
+            symbol: stock ticker symbol to query
 
         Returns: boolean whether supported or not
 
@@ -331,8 +323,7 @@ class Sentipy:
 
     @beartype
     def all_stocks(self) -> SetType[str]:
-        """
-        Get a list of all stocks for which Sentiment gather data
+        """Get a list of all stocks for which Sentiment gather data.
 
         Returns (set[str]): list of stock symbols
 
@@ -344,9 +335,19 @@ class Sentipy:
     @property  # type: ignore[misc]
     @beartype
     def account_info(self) -> Optional[_ApiResponse]:
+        """Provides information about the user's account.
+
+        Returns:
+            The api response about the user's account
+        """
         return _ApiResponse(self._base_request("account"))
 
     @property  # type: ignore[misc]
     @beartype
     def api_credentials(self) -> TupleType[str, str]:
+        """Provides the user's api credentials.
+
+        Returns:
+            The user's api token and key
+        """
         return self.token, self.key

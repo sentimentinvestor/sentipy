@@ -1,4 +1,4 @@
-"""Use typing module where required for python < 3.9, and define additional types.
+"""Use typing module where required for python < 3.9, and defines additional types.
 
 This deals with the typing module being depreciated.
 """

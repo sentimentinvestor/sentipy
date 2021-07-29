@@ -32,6 +32,7 @@ black = "^21.7b0"
 isort = "^5.9.2"
 pre-commit = "^2.13.0"
 vcrpy = "^4.1.1"
+pydocstyle = "^6.1.1"
 
 [tool.isort]
 profile = "black"
