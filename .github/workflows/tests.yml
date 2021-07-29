@@ -25,3 +25,4 @@ jobs:
         run: |
           poetry run black --check .
           poetry run isort --check-only .
+          poetry run pydocstyle --convention=google .

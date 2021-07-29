@@ -1,3 +1,8 @@
+"""This provides websocket support for Sentiment Investor.
+
+For more information, please visit https://docs.sentimentinvestor.com/RESTful/websocket
+"""
+
 # TODO: Refactor to use the threading library
 import _thread as thread
 import datetime
@@ -16,13 +21,14 @@ from ._typing_imports import DictType, IterableType
 
 # Defined at the top since it's used in type annotations
 class StockUpdateData:
+    """A new data container for the stock update."""
+
     @beartype
     def __init__(self, message: str) -> None:
-        """
-        Initialise a new data container for the stock update
+        """Defines attributes from the message for the new container.
 
         Args:
-            A JSON string returned by the websocket server
+            message: A JSON string returned by the websocket server
         """
         for k, v in json.loads(message).items():
             setattr(self, k, v)
@@ -33,9 +39,7 @@ CallableType = Callable[[StockUpdateData], None]
 
 
 class _Stream:
-    """
-    Base class for different kinds of websocket streams
-    """
+    """Base class for different kinds of websocket streams."""
 
     base_url = "ws://socket.sentimentinvestor.com/"
     """
@@ -49,12 +53,11 @@ class _Stream:
     def __init__(
         self, token: str, key: str, callback: CallableType, fragment: str
     ) -> None:
-        """
-        Initialise a new web socket stream
+        """Initialise a new web socket stream.
 
         Args:
-            token (str): SentimentInvestor API token
-            key (str): SentimentInvestor API key
+            token: SentimentInvestor API token
+            key: SentimentInvestor API key
             callback: function accepting one argument of type `StockUpdateData` that is called when data is received
             fragment: the websocket endpoint to contact
 
@@ -138,14 +141,16 @@ class _Stream:
 
     @beartype
     def reconnect(self) -> None:
-        """
-        Manually request a websocket reconnection.
-        This should not usually be necessary as Sentipy will try to reconnect automatically if connection is lost
+        """Manually request a websocket reconnection.
+
+        This should not usually be necessary as SentiPy will try to reconnect automatically if connection is lost.
         """
         self.__connect()
 
 
 class StocksStream(_Stream):
+    """A WebSocket listener for specific stocks."""
+
     @beartype
     def __init__(
         self,
@@ -154,8 +159,7 @@ class StocksStream(_Stream):
         callback: CallableType,
         symbols: Optional[IterableType[str]] = None,
     ) -> None:
-        """
-        Initialise a new WebSocket listener for specific stocks
+        """Initialises the new websocket listener.
 
         Args:
             symbols: an iterable of symbols specifying which stock changes to listen for
@@ -169,10 +173,11 @@ class StocksStream(_Stream):
 
 
 class AllStocksStream(_Stream):
+    """A WebSocket listener for all available stocks."""
+
     @beartype
     def __init__(self, token: str, key: str, callback: CallableType) -> None:
-        """
-        Initialise a new WebSocket listener for all available stocks
+        """Initialises the new websocket listener.
 
         Args:
             token: SentimentInvestor API token
