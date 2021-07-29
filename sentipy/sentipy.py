@@ -1,6 +1,6 @@
 """The Sentiment Investor Python Client library.
 
-This provides the main Senipy object, through which you can authenticate yourself.
+This provides the main SentiPy object, through which you can authenticate yourself.
 
 For more information, please visit https://docs.sentimentinvestor.com/python/
 """
@@ -57,7 +57,7 @@ class _ApiResult(_ApiResponse):
 
 
 class Sentipy:
-    """This defines the main Sentipy object through which the user authenticates themselves."""
+    """This defines the main SentiPy object through which the user authenticates themselves."""
 
     base_url = r"https://api.sentimentinvestor.com/v4/"
     """

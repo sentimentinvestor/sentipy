@@ -143,7 +143,7 @@ class _Stream:
     def reconnect(self) -> None:
         """Manually request a websocket reconnection.
 
-        This should not usually be necessary as Sentipy will try to reconnect automatically if connection is lost.
+        This should not usually be necessary as SentiPy will try to reconnect automatically if connection is lost.
         """
         self.__connect()
 
