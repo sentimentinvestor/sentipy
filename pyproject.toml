@@ -1,11 +1,14 @@
 [tool.poetry]
 name = "sentiment-investor"
-version = "2.0.0"
+version = "2.1.0"
 description = "Access the Sentiment Investor API through Python"
 authors = ["Robert Stok <rs.stok@gmail.com>"]
 readme = "README.md"
 license = "MIT"
-include = ["sentipy/py.typed"]
+packages = [
+  {include = "sentipy"}
+]
+include = ["src/sentipy/py.typed"]
 classifiers = [
   "Natural Language :: English",
   "Operating System :: OS Independent",
